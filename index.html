@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=2.0">
+    <link rel="stylesheet" href="style.css?v=3.0">
 </head>
 <body>
     <!-- Loading Screen -->
@@ -218,84 +218,229 @@
 
         <!-- Main Content -->
         <main id="main-content">
-            <!-- Video Player Panel -->
+            <!-- Workspace Panel (Dynamically switches by Mode) -->
             <section id="video-panel" class="panel glass-panel">
                 <div class="panel-header">
-                    <h2>🎬 Media Player</h2>
-                    <button id="clear-video-btn" class="btn btn-ghost btn-sm hidden">✕ Clear</button>
-                </div>
-                <div id="video-wrapper">
-                    <div id="drop-zone">
-                        <div class="drop-visual">
-                            <div class="drop-icon">
-                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                            </div>
-                            <p class="drop-title">Drop video file here</p>
-                            <p class="drop-hint">or click to browse • MP4, WebM, MKV supported</p>
-                            <button id="browse-btn" class="btn btn-primary btn-sm">Browse Files</button>
-                        </div>
-                        <input type="file" id="file-input" accept="video/*" hidden>
-                    </div>
-                    <video id="media-player" class="hidden" controls preload="metadata"></video>
-                </div>
-                <!-- Study Mode Bookmarks (visible in Study Mode) -->
-                <div id="study-panel" class="mode-addon-panel hidden">
-                    <div class="addon-header">
-                        <span class="addon-title">📚 Lecture Bookmarks (Saved on Nodding/Sleep)</span>
-                        <button id="add-manual-bookmark-btn" class="btn btn-ghost btn-sm">📍 Add Bookmark</button>
-                    </div>
-                    <div id="study-bookmarks-list" class="bookmarks-list">
-                        <p class="empty-hint">No bookmarks yet. If you nod off or close your eyes during a lecture, SleepGuard auto-saves the timestamp here so you can resume!</p>
+                    <h2 id="workspace-title">🎬 Media Player</h2>
+                    <div class="workspace-header-actions">
+                        <button id="clear-video-btn" class="btn btn-ghost btn-sm hidden">✕ Clear</button>
                     </div>
                 </div>
 
-                <!-- Health & Ergonomics View (visible in Health Mode) -->
-                <div id="health-panel" class="mode-addon-panel hidden">
-                    <div class="health-grid">
-                        <div class="health-card">
-                            <span class="health-icon">🪑</span>
-                            <div class="health-card-body">
-                                <span class="health-label">Spine & Posture</span>
-                                <span class="health-value" id="health-posture-val">Optimal</span>
-                                <span class="health-sub">Keep ears aligned over shoulders</span>
+                <!-- 1. MOVIE WORKSPACE -->
+                <div id="workspace-movie" class="domain-workspace">
+                    <div id="video-wrapper">
+                        <div id="drop-zone">
+                            <div class="drop-visual">
+                                <div class="drop-icon">
+                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                </div>
+                                <p class="drop-title">Drop movie or video file here</p>
+                                <p class="drop-hint">or click to browse • MP4, WebM, MKV supported</p>
+                                <button id="browse-btn" class="btn btn-primary btn-sm">Browse Files</button>
+                            </div>
+                            <input type="file" id="file-input" accept="video/*" hidden>
+                        </div>
+                        <video id="media-player" class="hidden" controls preload="metadata"></video>
+                    </div>
+                </div>
+
+                <!-- 2. STUDY WORKSPACE (PDF, Textbooks, Lecture Notes & Slides) -->
+                <div id="workspace-study" class="domain-workspace hidden">
+                    <div id="study-doc-wrapper">
+                        <div id="study-drop-zone" class="domain-drop-zone">
+                            <div class="drop-visual">
+                                <div class="drop-icon">📚</div>
+                                <p class="drop-title">Drop PDF, Textbook or Lecture Notes</p>
+                                <p class="drop-hint">PDF, TXT, Markdown, or Lecture Video</p>
+                                <div class="drop-actions-row">
+                                    <button id="browse-study-btn" class="btn btn-primary btn-sm">Browse Study File</button>
+                                    <button id="load-sample-study-btn" class="btn btn-secondary btn-sm">Load Sample Notes</button>
+                                </div>
+                            </div>
+                            <input type="file" id="study-file-input" accept=".pdf,.txt,.md,text/plain,application/pdf,video/*" hidden>
+                        </div>
+                        <div id="study-viewer-container" class="hidden">
+                            <div class="viewer-toolbar">
+                                <span id="study-doc-name" class="viewer-doc-title">Document.pdf</span>
+                                <div class="viewer-controls">
+                                    <button id="study-zoom-out" class="btn btn-ghost btn-sm">A-</button>
+                                    <button id="study-zoom-in" class="btn btn-ghost btn-sm">A+</button>
+                                    <button id="study-close-doc" class="btn btn-ghost btn-sm">✕ Close</button>
+                                </div>
+                            </div>
+                            <div id="study-text-viewer" class="study-text-box hidden"></div>
+                            <iframe id="study-pdf-frame" class="study-pdf-box hidden"></iframe>
+                        </div>
+                    </div>
+                    <!-- Study Bookmarks List -->
+                    <div id="study-panel" class="mode-addon-panel">
+                        <div class="addon-header">
+                            <span class="addon-title">📚 Lecture & Reading Bookmarks</span>
+                            <button id="add-manual-bookmark-btn" class="btn btn-ghost btn-sm">📍 Add Bookmark</button>
+                        </div>
+                        <div id="study-bookmarks-list" class="bookmarks-list">
+                            <p class="empty-hint">No bookmarks yet. If you nod off or close your eyes while studying, SleepGuard auto-saves the location here!</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. CODE & DEV WORKSPACE (Source Files, Scripts & LeetCode Scratchpad) -->
+                <div id="workspace-code" class="domain-workspace hidden">
+                    <div id="code-wrapper">
+                        <div id="code-drop-zone" class="domain-drop-zone">
+                            <div class="drop-visual">
+                                <div class="drop-icon">💻</div>
+                                <p class="drop-title">Drop Source Code or Open Script</p>
+                                <p class="drop-hint">Python, JavaScript, C++, Java, Rust, HTML & more</p>
+                                <div class="drop-actions-row">
+                                    <button id="browse-code-btn" class="btn btn-primary btn-sm">Open Code File</button>
+                                    <button id="load-sample-code-btn" class="btn btn-secondary btn-sm">Load Demo Code</button>
+                                </div>
+                            </div>
+                            <input type="file" id="code-file-input" accept=".js,.ts,.py,.java,.cpp,.c,.cs,.html,.css,.json,.go,.rs,.sql,.txt,.sh" hidden>
+                        </div>
+                        <div id="code-editor-container" class="hidden">
+                            <div class="editor-toolbar">
+                                <div class="editor-info">
+                                    <span class="editor-dot"></span>
+                                    <span id="code-filename">script.py</span>
+                                </div>
+                                <div class="editor-actions">
+                                    <span id="code-stats" class="editor-stats">0 lines</span>
+                                    <button id="code-close-btn" class="btn btn-ghost btn-sm">✕ Close</button>
+                                </div>
+                            </div>
+                            <div class="editor-body">
+                                <div id="code-line-numbers" class="code-line-numbers">1</div>
+                                <textarea id="code-textarea" class="code-textarea" spellcheck="false" placeholder="Write or paste your code here..."></textarea>
                             </div>
                         </div>
-                        <div class="health-card">
-                            <span class="health-icon">🌿</span>
-                            <div class="health-card-body">
-                                <span class="health-label">20-20-20 Eye Rest</span>
-                                <span class="health-value" id="health-break-countdown">20:00</span>
-                                <button id="trigger-break-now-btn" class="btn btn-primary btn-sm">Take Break Now</button>
+                    </div>
+                    <!-- Dev Flow Status -->
+                    <div id="flow-panel" class="mode-addon-panel">
+                        <div class="flow-grid">
+                            <div class="flow-card">
+                                <span class="flow-icon">⚡</span>
+                                <div class="flow-card-body">
+                                    <span class="flow-label">Flow & Focus Index</span>
+                                    <span class="flow-value" id="flow-index-val">High (92%)</span>
+                                    <span class="flow-sub">Consistent eye movement & attention</span>
+                                </div>
                             </div>
-                        </div>
-                        <div class="health-card">
-                            <span class="health-icon">💧</span>
-                            <div class="health-card-body">
-                                <span class="health-label">Eye Hydration</span>
-                                <span class="health-value" id="health-blink-status">Normal</span>
-                                <span class="health-sub">Target > 12 blinks/min</span>
+                            <div class="flow-card">
+                                <span class="flow-icon">🧠</span>
+                                <div class="flow-card-body">
+                                    <span class="flow-label">Mental Fatigue Status</span>
+                                    <span class="flow-value" id="flow-fatigue-val">Fresh</span>
+                                    <span class="flow-sub" id="flow-fatigue-advice">Optimal state for deep coding & debugging</span>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Code & Creative Flow Dashboard (visible in Code & Creative Mode) -->
-                <div id="flow-panel" class="mode-addon-panel hidden">
-                    <div class="flow-grid">
-                        <div class="flow-card">
-                            <span class="flow-icon">⚡</span>
-                            <div class="flow-card-body">
-                                <span class="flow-label">Flow & Focus Index</span>
-                                <span class="flow-value" id="flow-index-val">High (92%)</span>
-                                <span class="flow-sub">Consistent eye movement & attention</span>
+                <!-- 4. CREATIVE WORKSPACE (Reference Canvas & Moodboard) -->
+                <div id="workspace-creative" class="domain-workspace hidden">
+                    <div id="creative-wrapper">
+                        <div id="creative-drop-zone" class="domain-drop-zone">
+                            <div class="drop-visual">
+                                <div class="drop-icon">🎨</div>
+                                <p class="drop-title">Drop Design Reference or Artwork</p>
+                                <p class="drop-hint">PNG, JPG, SVG, WebP, Concept Art, 3D Renders</p>
+                                <div class="drop-actions-row">
+                                    <button id="browse-creative-btn" class="btn btn-primary btn-sm">Browse Artwork</button>
+                                    <button id="load-sample-creative-btn" class="btn btn-secondary btn-sm">Load Concept Art</button>
+                                </div>
+                            </div>
+                            <input type="file" id="creative-file-input" accept="image/*" hidden>
+                        </div>
+                        <div id="creative-canvas-container" class="hidden">
+                            <div class="creative-toolbar">
+                                <span id="creative-image-name" class="viewer-doc-title">Reference.png</span>
+                                <div class="creative-zoom-controls">
+                                    <button id="creative-zoom-out" class="btn btn-ghost btn-sm">−</button>
+                                    <span id="creative-zoom-val" class="zoom-text">100%</span>
+                                    <button id="creative-zoom-in" class="btn btn-ghost btn-sm">+</button>
+                                    <button id="creative-zoom-reset" class="btn btn-ghost btn-sm">Reset</button>
+                                    <button id="creative-close-btn" class="btn btn-ghost btn-sm">✕</button>
+                                </div>
+                            </div>
+                            <div class="creative-viewport">
+                                <img id="creative-img" src="" alt="Reference Image">
+                            </div>
+                            <div id="palette-row" class="palette-row">
+                                <span class="palette-label">Palette:</span>
+                                <div id="palette-swatches" class="palette-swatches"></div>
                             </div>
                         </div>
-                        <div class="flow-card">
-                            <span class="flow-icon">🧠</span>
-                            <div class="flow-card-body">
-                                <span class="flow-label">Mental Fatigue Status</span>
-                                <span class="flow-value" id="flow-fatigue-val">Fresh</span>
-                                <span class="flow-sub" id="flow-fatigue-advice">Optimal state for complex architecture & debugging</span>
+                    </div>
+                    <!-- Creative Studio Note -->
+                    <div class="mode-addon-panel">
+                        <div class="creative-studio-card">
+                            <span class="studio-icon">✨</span>
+                            <div class="studio-body">
+                                <span class="studio-title">Creative Flow Guard Active</span>
+                                <span class="studio-sub">Keeps reference art visible on screen while you work in Photoshop, Blender, or Figma. Lo-fi chime alerts you if you zone out.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. POSTURE & HEALTH WORKSPACE (Ergonomics Lab & 20-20-20 Planner) -->
+                <div id="workspace-health" class="domain-workspace hidden">
+                    <div id="health-dashboard-wrapper">
+                        <div class="health-lab-grid">
+                            <div class="ergo-card">
+                                <div class="ergo-header">
+                                    <span class="ergo-icon">🪑</span>
+                                    <span class="ergo-title">Ergonomic Desk Checklist</span>
+                                </div>
+                                <div class="checklist-items">
+                                    <label class="check-item"><input type="checkbox" checked> Monitor at arm's length (20-30 inches)</label>
+                                    <label class="check-item"><input type="checkbox" checked> Top third of screen aligned at eye level</label>
+                                    <label class="check-item"><input type="checkbox" checked> Shoulders relaxed, elbows at 90°</label>
+                                    <label class="check-item"><input type="checkbox" checked> Feet flat on the floor, spine supported</label>
+                                </div>
+                            </div>
+                            <div class="ergo-card">
+                                <div class="ergo-header">
+                                    <span class="ergo-icon">🎯</span>
+                                    <span class="ergo-title">Live Posture Target Guide</span>
+                                </div>
+                                <p class="ergo-desc">SleepGuard monitors your head coordinates relative to your calibrated baseline. If your chin drops or nose dips lower into your chair, you get a gentle spine alert.</p>
+                                <div class="ergo-actions">
+                                    <button id="health-calibrate-btn" class="btn btn-primary btn-sm">Calibrate Good Posture Now</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Health Cards Row -->
+                    <div id="health-panel" class="mode-addon-panel">
+                        <div class="health-grid">
+                            <div class="health-card">
+                                <span class="health-icon">🪑</span>
+                                <div class="health-card-body">
+                                    <span class="health-label">Spine & Posture</span>
+                                    <span class="health-value" id="health-posture-val">Optimal</span>
+                                    <span class="health-sub">Keep ears over shoulders</span>
+                                </div>
+                            </div>
+                            <div class="health-card">
+                                <span class="health-icon">🌿</span>
+                                <div class="health-card-body">
+                                    <span class="health-label">20-20-20 Eye Rest</span>
+                                    <span class="health-value" id="health-break-countdown">20:00</span>
+                                    <button id="trigger-break-now-btn" class="btn btn-primary btn-sm">Take Break Now</button>
+                                </div>
+                            </div>
+                            <div class="health-card">
+                                <span class="health-icon">💧</span>
+                                <div class="health-card-body">
+                                    <span class="health-label">Eye Hydration</span>
+                                    <span class="health-value" id="health-blink-status">Normal</span>
+                                    <span class="health-sub">Target > 12 blinks/min</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -435,6 +580,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
-    <script src="app.js?v=2.0"></script>
+    <script src="app.js?v=3.0"></script>
 </body>
 </html>

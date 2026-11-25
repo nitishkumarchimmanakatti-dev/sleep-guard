@@ -188,6 +188,11 @@
     $("#pip-btn").addEventListener("click", togglePiP);
     // Video drop zone
     setupVideoPlayer();
+    // Domain workspaces
+    setupStudyWorkspace();
+    setupCodeWorkspace();
+    setupCreativeWorkspace();
+    setupHealthWorkspace();
     // Populate cameras
     populateCameras();
     // Auto-start camera
@@ -855,45 +860,403 @@
     player.play().catch(() => {});
   }
 
+  // ── 1. Study Workspace ──
+  let studyFontSize = 14;
+  function setupStudyWorkspace() {
+    const dropZone = $("#study-drop-zone");
+    const fileInput = $("#study-file-input");
+    const browseBtn = $("#browse-study-btn");
+    const sampleBtn = $("#load-sample-study-btn");
+    const viewer = $("#study-viewer-container");
+    const closeBtn = $("#study-close-doc");
+    const textViewer = $("#study-text-viewer");
+    const pdfFrame = $("#study-pdf-frame");
+    const zoomIn = $("#study-zoom-in");
+    const zoomOut = $("#study-zoom-out");
+
+    if (!dropZone || !fileInput) return;
+
+    browseBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      fileInput.click();
+    });
+    dropZone.addEventListener("click", () => fileInput.click());
+
+    fileInput.addEventListener("change", (e) => {
+      if (e.target.files.length > 0) loadStudyFile(e.target.files[0]);
+    });
+
+    dropZone.addEventListener("dragover", (e) => { e.preventDefault(); dropZone.classList.add("drag-over"); });
+    dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"));
+    dropZone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropZone.classList.remove("drag-over");
+      if (e.dataTransfer.files.length > 0) loadStudyFile(e.dataTransfer.files[0]);
+    });
+
+    sampleBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      loadSampleStudyNotes();
+    });
+
+    closeBtn.addEventListener("click", () => {
+      viewer.classList.add("hidden");
+      dropZone.classList.remove("hidden");
+      pdfFrame.src = "";
+      textViewer.innerHTML = "";
+    });
+
+    zoomIn.addEventListener("click", () => {
+      studyFontSize = Math.min(26, studyFontSize + 2);
+      textViewer.style.fontSize = studyFontSize + "px";
+    });
+    zoomOut.addEventListener("click", () => {
+      studyFontSize = Math.max(11, studyFontSize - 2);
+      textViewer.style.fontSize = studyFontSize + "px";
+    });
+  }
+
+  function loadStudyFile(file) {
+    const viewer = $("#study-viewer-container");
+    const dropZone = $("#study-drop-zone");
+    const docName = $("#study-doc-name");
+    const textViewer = $("#study-text-viewer");
+    const pdfFrame = $("#study-pdf-frame");
+
+    docName.textContent = file.name;
+    dropZone.classList.add("hidden");
+    viewer.classList.remove("hidden");
+
+    if (file.type === "application/pdf" || file.name.endsWith(".pdf")) {
+      textViewer.classList.add("hidden");
+      pdfFrame.classList.remove("hidden");
+      pdfFrame.src = URL.createObjectURL(file);
+    } else {
+      pdfFrame.classList.add("hidden");
+      textViewer.classList.remove("hidden");
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const text = e.target.result;
+        textViewer.innerHTML = text
+          .split("\n\n")
+          .map((p) => `<p>${p.replace(/\n/g, "<br>")}</p>`)
+          .join("");
+      };
+      reader.readAsText(file);
+    }
+  }
+
+  function loadSampleStudyNotes() {
+    const viewer = $("#study-viewer-container");
+    const dropZone = $("#study-drop-zone");
+    const docName = $("#study-doc-name");
+    const textViewer = $("#study-text-viewer");
+    const pdfFrame = $("#study-pdf-frame");
+
+    docName.textContent = "Cognitive_Neuroscience_Ch4_Memory.txt";
+    dropZone.classList.add("hidden");
+    viewer.classList.remove("hidden");
+    pdfFrame.classList.add("hidden");
+    textViewer.classList.remove("hidden");
+
+    textViewer.innerHTML = `
+      <h3>Chapter 4: Memory Consolidation and the Stages of Sleep</h3>
+      <p><strong>1. Introduction to Slow-Wave Sleep (SWS)</strong><br>
+      During deep slow-wave sleep, hippocampal-neocortical dialogue transfers temporary memory representations from the hippocampus into distributed neocortical networks for long-term storage.</p>
+      <p><strong>2. Synaptic Homeostasis Hypothesis (SHY)</strong><br>
+      Wakefulness is associated with net synaptic potentiation across extensive brain regions, consuming metabolic energy and space. Sleep serves an essential homeostatic function by downscaling synaptic strength to baseline levels while preserving relative potentiations.</p>
+      <p><strong>3. Eye Movement & Focus Saccades</strong><br>
+      Reading comprehension requires precise fixations (200-250ms) separated by rapid saccadic jumps. When cognitive fatigue sets in, fixation duration elongates, saccadic amplitude contracts, and blink rate collapses below 8 blinks/min.</p>
+      <p><em>💡 SleepGuard Active: Keep reading comfortably. If your eye closure exceeds 1.8s or head drooping occurs, SleepGuard will auto-bookmark this position and wake you up!</em></p>
+    `;
+  }
+
+  // ── 2. Code & Dev Workspace ──
+  function setupCodeWorkspace() {
+    const dropZone = $("#code-drop-zone");
+    const fileInput = $("#code-file-input");
+    const browseBtn = $("#browse-code-btn");
+    const sampleBtn = $("#load-sample-code-btn");
+    const editor = $("#code-editor-container");
+    const closeBtn = $("#code-close-btn");
+    const textarea = $("#code-textarea");
+    const lineNumbers = $("#code-line-numbers");
+
+    if (!dropZone || !fileInput) return;
+
+    browseBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      fileInput.click();
+    });
+    dropZone.addEventListener("click", () => fileInput.click());
+
+    fileInput.addEventListener("change", (e) => {
+      if (e.target.files.length > 0) loadCodeFile(e.target.files[0]);
+    });
+
+    dropZone.addEventListener("dragover", (e) => { e.preventDefault(); dropZone.classList.add("drag-over"); });
+    dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"));
+    dropZone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropZone.classList.remove("drag-over");
+      if (e.dataTransfer.files.length > 0) loadCodeFile(e.dataTransfer.files[0]);
+    });
+
+    sampleBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      loadSampleCode();
+    });
+
+    closeBtn.addEventListener("click", () => {
+      editor.classList.add("hidden");
+      dropZone.classList.remove("hidden");
+      textarea.value = "";
+    });
+
+    textarea.addEventListener("input", updateCodeEditorStats);
+    textarea.addEventListener("scroll", () => {
+      lineNumbers.scrollTop = textarea.scrollTop;
+    });
+  }
+
+  function loadCodeFile(file) {
+    const editor = $("#code-editor-container");
+    const dropZone = $("#code-drop-zone");
+    const filename = $("#code-filename");
+    const textarea = $("#code-textarea");
+
+    filename.textContent = file.name;
+    dropZone.classList.add("hidden");
+    editor.classList.remove("hidden");
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      textarea.value = e.target.result;
+      updateCodeEditorStats();
+    };
+    reader.readAsText(file);
+  }
+
+  function loadSampleCode() {
+    const editor = $("#code-editor-container");
+    const dropZone = $("#code-drop-zone");
+    const filename = $("#code-filename");
+    const textarea = $("#code-textarea");
+
+    filename.textContent = "fatigue_detection_pipeline.py";
+    dropZone.classList.add("hidden");
+    editor.classList.remove("hidden");
+
+    textarea.value = `# Late-Night AI Algorithm Scratchpad
+import numpy as np
+
+def calculate_eye_aspect_ratio(eye_landmarks):
+    """
+    Computes Eye Aspect Ratio (EAR) from vertical and horizontal Euclidean distances.
+    """
+    p1, p2, p3, p4, p5, p6 = eye_landmarks
+    vertical_1 = np.linalg.norm(p2 - p6)
+    vertical_2 = np.linalg.norm(p3 - p5)
+    horizontal = np.linalg.norm(p1 - p4)
+    
+    ear = (vertical_1 + vertical_2) / (2.0 * horizontal)
+    return float(ear)
+
+# DevGuard Status:
+# - Head Nodding Protection: ACTIVE
+# - Low-Blink Stare Protection: ACTIVE
+# - Alert Mode: BINAURAL HARMONIC BELL (Warm Cmaj9 Chord)
+print("Developer Flow Session Started. Stay hydrated!")
+`;
+    updateCodeEditorStats();
+  }
+
+  function updateCodeEditorStats() {
+    const textarea = $("#code-textarea");
+    const stats = $("#code-stats");
+    const lineNumbers = $("#code-line-numbers");
+    if (!textarea || !lineNumbers) return;
+
+    const lines = textarea.value.split("\n");
+    const count = lines.length;
+    if (stats) stats.textContent = `${count} line${count === 1 ? "" : "s"}`;
+    lineNumbers.textContent = Array.from({ length: count }, (_, i) => i + 1).join("\n");
+  }
+
+  // ── 3. Creative Workspace ──
+  let creativeZoom = 1.0;
+  function setupCreativeWorkspace() {
+    const dropZone = $("#creative-drop-zone");
+    const fileInput = $("#creative-file-input");
+    const browseBtn = $("#browse-creative-btn");
+    const sampleBtn = $("#load-sample-creative-btn");
+    const container = $("#creative-canvas-container");
+    const closeBtn = $("#creative-close-btn");
+    const img = $("#creative-img");
+    const zoomIn = $("#creative-zoom-in");
+    const zoomOut = $("#creative-zoom-out");
+    const zoomReset = $("#creative-zoom-reset");
+
+    if (!dropZone || !fileInput) return;
+
+    browseBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      fileInput.click();
+    });
+    dropZone.addEventListener("click", () => fileInput.click());
+
+    fileInput.addEventListener("change", (e) => {
+      if (e.target.files.length > 0) loadCreativeImage(e.target.files[0]);
+    });
+
+    dropZone.addEventListener("dragover", (e) => { e.preventDefault(); dropZone.classList.add("drag-over"); });
+    dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"));
+    dropZone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropZone.classList.remove("drag-over");
+      if (e.dataTransfer.files.length > 0) loadCreativeImage(e.dataTransfer.files[0]);
+    });
+
+    sampleBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      loadSampleCreativeArt();
+    });
+
+    closeBtn.addEventListener("click", () => {
+      container.classList.add("hidden");
+      dropZone.classList.remove("hidden");
+      img.src = "";
+    });
+
+    zoomIn.addEventListener("click", () => {
+      creativeZoom = Math.min(3.0, creativeZoom + 0.25);
+      applyCreativeZoom();
+    });
+    zoomOut.addEventListener("click", () => {
+      creativeZoom = Math.max(0.5, creativeZoom - 0.25);
+      applyCreativeZoom();
+    });
+    zoomReset.addEventListener("click", () => {
+      creativeZoom = 1.0;
+      applyCreativeZoom();
+    });
+  }
+
+  function applyCreativeZoom() {
+    const img = $("#creative-img");
+    const zoomVal = $("#creative-zoom-val");
+    if (img) img.style.transform = `scale(${creativeZoom})`;
+    if (zoomVal) zoomVal.textContent = Math.round(creativeZoom * 100) + "%";
+  }
+
+  function loadCreativeImage(file) {
+    const container = $("#creative-canvas-container");
+    const dropZone = $("#creative-drop-zone");
+    const imgName = $("#creative-image-name");
+    const img = $("#creative-img");
+
+    imgName.textContent = file.name;
+    dropZone.classList.add("hidden");
+    container.classList.remove("hidden");
+    img.src = URL.createObjectURL(file);
+    creativeZoom = 1.0;
+    applyCreativeZoom();
+    generateSamplePalette(["#00d4ff", "#a855f7", "#ec4899", "#10b981", "#f59e0b"]);
+  }
+
+  function loadSampleCreativeArt() {
+    const container = $("#creative-canvas-container");
+    const dropZone = $("#creative-drop-zone");
+    const imgName = $("#creative-image-name");
+    const img = $("#creative-img");
+
+    imgName.textContent = "Cyberpunk_Concept_Moodboard.svg";
+    dropZone.classList.add("hidden");
+    container.classList.remove("hidden");
+
+    const svgData = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 350" width="100%" height="100%">
+      <defs>
+        <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#0a0a23"/>
+          <stop offset="50%" stop-color="#14143a"/>
+          <stop offset="100%" stop-color="#2a0845"/>
+        </linearGradient>
+        <linearGradient id="neon" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#00d4ff"/>
+          <stop offset="100%" stop-color="#ff007f"/>
+        </linearGradient>
+      </defs>
+      <rect width="600" height="350" fill="url(#bg)"/>
+      <circle cx="300" cy="160" r="90" fill="none" stroke="url(#neon)" stroke-width="4" opacity="0.8"/>
+      <polygon points="300,90 370,210 230,210" fill="rgba(0, 212, 255, 0.2)" stroke="#00d4ff" stroke-width="2"/>
+      <text x="300" y="270" font-family="sans-serif" font-size="20" font-weight="bold" fill="#fff" text-anchor="middle" letter-spacing="4">CONCEPT REFERENCE BOARD</text>
+      <text x="300" y="300" font-family="sans-serif" font-size="12" fill="#a5b4fc" text-anchor="middle">Keep open while rendering in Blender or Photoshop</text>
+    </svg>`;
+
+    img.src = "data:image/svg+xml;utf8," + encodeURIComponent(svgData);
+    creativeZoom = 1.0;
+    applyCreativeZoom();
+    generateSamplePalette(["#0a0a23", "#00d4ff", "#ff007f", "#a5b4fc", "#2a0845"]);
+  }
+
+  function generateSamplePalette(colors) {
+    const swatches = $("#palette-swatches");
+    if (!swatches) return;
+    swatches.innerHTML = colors.map((c) => `
+      <div class="palette-swatch" style="background:${c};" title="Click to copy ${c}" onclick="navigator.clipboard.writeText('${c}')"></div>
+    `).join("");
+  }
+
+  // ── 4. Health Workspace ──
+  function setupHealthWorkspace() {
+    const btn = $("#health-calibrate-btn");
+    if (btn) btn.addEventListener("click", () => calibratePosture(true));
+  }
+
   // ═══════════════════════════════════════
   // Mode Switcher, Posture, Nodding & Health Modules
   // ═══════════════════════════════════════
 
   const MODE_METADATA = {
     movie: {
+      title: "🎬 Media Player",
+      workspaceId: "workspace-movie",
       hint: "Watching movies/shows with deep sleep alarm & VLC float",
       delay: 3.0,
       soundStyle: "siren",
       note: "💡 You can also watch in VLC, Netflix, or any player — SleepGuard monitors independently",
-      panels: []
     },
     code: {
+      title: "💻 Code Workspace & Fatigue Guard",
+      workspaceId: "workspace-code",
       hint: "Coding & Dev: Head nod detection, fatigue tracking & harmonic bell",
       delay: 2.5,
       soundStyle: "binaural",
-      note: "💻 DevGuard active: Head nodding, blink rate, and fatigue monitoring running in background",
-      panels: ["flow-panel"]
+      note: "💻 DevGuard active: Open or write code; SleepGuard protects against late-night nodding & fatigue",
     },
     creative: {
-      hint: "Creative Studio: Gentle lo-fi chimes & flow-state tracking",
+      title: "🎨 Design Board & Reference Canvas",
+      workspaceId: "workspace-creative",
+      hint: "Creative Studio: Reference artwork board & flow-state tracking",
       delay: 2.5,
       soundStyle: "binaural",
-      note: "🎨 Creative Mode: Tracks focus zones during rendering & timeline editing",
-      panels: ["flow-panel"]
+      note: "🎨 Creative Mode: Keep reference artwork on screen with zoom/pan & color swatches",
     },
     study: {
-      hint: "Smart Study: Fast 1.8s sleep response, motivational voice & lecture bookmarks",
+      title: "📚 Study Desk & Document Reader",
+      workspaceId: "workspace-study",
+      hint: "Smart Study: PDF/Notes reader, 1.8s sleep alert & lecture bookmarks",
       delay: 1.8,
       soundStyle: "gentle",
-      note: "📚 StudyGuard active: Auto-pauses lectures and bookmarks timestamp when you nod off",
-      panels: ["study-panel"]
+      note: "📚 StudyGuard active: Read textbooks or notes; SleepGuard auto-bookmarks where you nod off",
     },
     health: {
+      title: "🧘 Ergonomic Health & Posture Lab",
+      workspaceId: "workspace-health",
       hint: "Desk Health: Spine posture & 20-20-20 eye strain break reminder",
       delay: 3.0,
       soundStyle: "gentle",
-      note: "🧘 Posture & Eye Guardian: Keeps your spine straight & prevents digital eye strain",
-      panels: ["health-panel"]
+      note: "🧘 Posture & Eye Guardian: Keeps your spine straight & reminds you to take 20-20-20 breaks",
     }
   };
 
@@ -911,6 +1274,8 @@
     if (hintEl) hintEl.textContent = meta.hint;
     const noteEl = $("#panel-note-text");
     if (noteEl) noteEl.textContent = meta.note;
+    const titleEl = $("#workspace-title");
+    if (titleEl) titleEl.textContent = meta.title;
 
     // Apply mode default delay
     state.config.alertDelay = meta.delay;
@@ -919,10 +1284,11 @@
     const delayVal = $("#alert-delay-val");
     if (delayVal) delayVal.textContent = meta.delay.toFixed(1) + "s";
 
-    // Toggle panels
-    ["study-panel", "health-panel", "flow-panel"].forEach((id) => {
-      const el = $(`#${id}`);
-      if (el) el.classList.toggle("hidden", !meta.panels.includes(id));
+    // Toggle domain workspaces
+    const workspaces = ["workspace-movie", "workspace-study", "workspace-code", "workspace-creative", "workspace-health"];
+    workspaces.forEach((wId) => {
+      const el = $(`#${wId}`);
+      if (el) el.classList.toggle("hidden", wId !== meta.workspaceId);
     });
 
     playPostureChime();
