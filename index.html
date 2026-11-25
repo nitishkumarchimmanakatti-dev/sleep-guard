@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=3.1">
+    <link rel="stylesheet" href="style.css?v=3.2">
 </head>
 <body>
     <!-- Loading Screen -->
@@ -393,6 +393,11 @@
                         <div id="creative-canvas-container" class="hidden">
                             <div class="creative-toolbar">
                                 <span id="creative-image-name" class="viewer-doc-title">Reference.png</span>
+                                <div class="creative-tools-row">
+                                    <button id="creative-draw-toggle" class="btn btn-secondary btn-sm">✏️ Draw Notes</button>
+                                    <button id="creative-bw-toggle" class="btn btn-secondary btn-sm">🌓 B&W Values</button>
+                                    <button id="creative-spark-btn" class="btn btn-secondary btn-sm">💡 Spark Idea</button>
+                                </div>
                                 <div class="creative-zoom-controls">
                                     <button id="creative-zoom-out" class="btn btn-ghost btn-sm">−</button>
                                     <span id="creative-zoom-val" class="zoom-text">100%</span>
@@ -401,12 +406,34 @@
                                     <button id="creative-close-btn" class="btn btn-ghost btn-sm">✕</button>
                                 </div>
                             </div>
-                            <div class="creative-viewport">
+                            <!-- Drawing Tools Palette (shown when Draw Notes is active) -->
+                            <div id="creative-draw-toolbar" class="draw-toolbar hidden">
+                                <span class="draw-tool-label">Pen Color:</span>
+                                <button class="color-btn active" data-color="#00d4ff" style="background:#00d4ff"></button>
+                                <button class="color-btn" data-color="#ff007f" style="background:#ff007f"></button>
+                                <button class="color-btn" data-color="#00ff88" style="background:#00ff88"></button>
+                                <button class="color-btn" data-color="#ffaa00" style="background:#ffaa00"></button>
+                                <button class="color-btn" data-color="#ffffff" style="background:#ffffff"></button>
+                                <span class="draw-tool-label">Size:</span>
+                                <input type="range" id="draw-size-slider" min="1" max="15" value="3" style="width:60px;">
+                                <button id="draw-clear-btn" class="btn btn-ghost btn-sm">Clear Drawings</button>
+                            </div>
+                            <div class="creative-viewport" id="creative-viewport">
                                 <img id="creative-img" src="" alt="Reference Image">
+                                <canvas id="creative-draw-canvas" class="hidden"></canvas>
                             </div>
                             <div id="palette-row" class="palette-row">
                                 <span class="palette-label">Palette:</span>
                                 <div id="palette-swatches" class="palette-swatches"></div>
+                                <span class="palette-hint">(Click any swatch to copy HEX)</span>
+                            </div>
+                            <!-- Inspiration Prompt Card (shown when Spark Idea is clicked) -->
+                            <div id="creative-prompt-box" class="creative-prompt-box hidden">
+                                <div class="prompt-header">
+                                    <span class="prompt-tag">💡 Creative Challenge</span>
+                                    <button id="close-prompt-btn" class="btn btn-ghost btn-sm" style="padding:1px 6px;">✕</button>
+                                </div>
+                                <p id="creative-prompt-text" class="prompt-text">Loading inspiration...</p>
                             </div>
                         </div>
                     </div>
@@ -615,6 +642,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
-    <script src="app.js?v=3.1"></script>
+    <script src="app.js?v=3.2"></script>
 </body>
 </html>

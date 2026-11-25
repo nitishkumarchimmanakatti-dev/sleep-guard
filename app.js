@@ -1085,6 +1085,22 @@ print("Developer Flow Session Started. Stay hydrated!")
 
   // ── 3. Creative Workspace ──
   let creativeZoom = 1.0;
+  let isDrawingMode = false;
+  let isDrawing = false;
+  let drawPenColor = "#00d4ff";
+  let drawPenSize = 3;
+  let drawCanvas = null;
+  let drawCtx = null;
+
+  const CREATIVE_PROMPTS = [
+    "🎨 Value Check: Convert reference to B&W and ensure your key subject has at least 70% contrast against the background.",
+    "💡 Lighting Shift: Invert the light source to the opposite angle — practice dramatic rim or chiaroscuro lighting.",
+    "🎯 Color Constraint: Pick only 2 complementary colors from the palette below and build your scene using only those two.",
+    "📐 Geometric Reduction: Simplify this scene into fewer than 5 dominant silhouette shapes before adding detail.",
+    "🚀 Style Flip: Re-imagine this subject in a retro-futuristic Cyberpunk or Minimalist Bauhaus aesthetic.",
+    "🔍 Focal Point Rule: Crop the composition into a 1:1 square emphasizing the rule-of-thirds intersection."
+  ];
+
   function setupCreativeWorkspace() {
     const dropZone = $("#creative-drop-zone");
     const fileInput = $("#creative-file-input");
@@ -1096,6 +1112,18 @@ print("Developer Flow Session Started. Stay hydrated!")
     const zoomIn = $("#creative-zoom-in");
     const zoomOut = $("#creative-zoom-out");
     const zoomReset = $("#creative-zoom-reset");
+    const bwToggle = $("#creative-bw-toggle");
+    const drawToggle = $("#creative-draw-toggle");
+    const drawToolbar = $("#creative-draw-toolbar");
+    const drawSizeSlider = $("#draw-size-slider");
+    const drawClearBtn = $("#draw-clear-btn");
+    const sparkBtn = $("#creative-spark-btn");
+    const promptBox = $("#creative-prompt-box");
+    const promptText = $("#creative-prompt-text");
+    const closePromptBtn = $("#close-prompt-btn");
+
+    drawCanvas = $("#creative-draw-canvas");
+    if (drawCanvas) drawCtx = drawCanvas.getContext("2d");
 
     if (!dropZone || !fileInput) return;
 
@@ -1126,8 +1154,13 @@ print("Developer Flow Session Started. Stay hydrated!")
       container.classList.add("hidden");
       dropZone.classList.remove("hidden");
       img.src = "";
+      if (drawCanvas) drawCanvas.classList.add("hidden");
+      if (drawToolbar) drawToolbar.classList.add("hidden");
+      if (promptBox) promptBox.classList.add("hidden");
+      isDrawingMode = false;
     });
 
+    // Zoom
     zoomIn.addEventListener("click", () => {
       creativeZoom = Math.min(3.0, creativeZoom + 0.25);
       applyCreativeZoom();
@@ -1140,6 +1173,112 @@ print("Developer Flow Session Started. Stay hydrated!")
       creativeZoom = 1.0;
       applyCreativeZoom();
     });
+
+    // B&W Values Check Toggle
+    if (bwToggle) {
+      bwToggle.addEventListener("click", () => {
+        const isBw = img.classList.toggle("bw-active");
+        bwToggle.textContent = isBw ? "🎨 Full Color" : "🌓 B&W Values";
+        bwToggle.classList.toggle("btn-primary", isBw);
+        playPostureChime();
+      });
+    }
+
+    // Draw / Sketch Annotate Toggle
+    if (drawToggle && drawCanvas && drawToolbar) {
+      drawToggle.addEventListener("click", () => {
+        isDrawingMode = !isDrawingMode;
+        drawCanvas.classList.toggle("hidden", !isDrawingMode);
+        drawToolbar.classList.toggle("hidden", !isDrawingMode);
+        drawToggle.classList.toggle("btn-primary", isDrawingMode);
+        drawToggle.textContent = isDrawingMode ? "✓ Done Drawing" : "✏️ Draw Notes";
+
+        if (isDrawingMode) {
+          const viewport = $("#creative-viewport");
+          drawCanvas.width = viewport.clientWidth;
+          drawCanvas.height = viewport.clientHeight;
+        }
+      });
+
+      // Pen color buttons
+      $$(".color-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          $$(".color-btn").forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+          drawPenColor = btn.dataset.color;
+        });
+      });
+
+      // Size slider
+      if (drawSizeSlider) {
+        drawSizeSlider.addEventListener("input", (e) => {
+          drawPenSize = parseInt(e.target.value);
+        });
+      }
+
+      // Clear drawing
+      if (drawClearBtn) {
+        drawClearBtn.addEventListener("click", () => {
+          if (drawCtx && drawCanvas) drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+        });
+      }
+
+      // Drawing interaction handlers
+      drawCanvas.addEventListener("mousedown", startDrawing);
+      drawCanvas.addEventListener("mousemove", drawStroke);
+      window.addEventListener("mouseup", stopDrawing);
+
+      drawCanvas.addEventListener("touchstart", (e) => {
+        e.preventDefault();
+        startDrawing(e.touches[0]);
+      }, { passive: false });
+      drawCanvas.addEventListener("touchmove", (e) => {
+        e.preventDefault();
+        drawStroke(e.touches[0]);
+      }, { passive: false });
+      window.addEventListener("touchend", stopDrawing);
+    }
+
+    // Spark Inspiration Prompts
+    if (sparkBtn && promptBox && promptText) {
+      sparkBtn.addEventListener("click", () => {
+        const randomPrompt = CREATIVE_PROMPTS[Math.floor(Math.random() * CREATIVE_PROMPTS.length)];
+        promptText.textContent = randomPrompt;
+        promptBox.classList.remove("hidden");
+        playBinauralChime();
+      });
+    }
+
+    if (closePromptBtn && promptBox) {
+      closePromptBtn.addEventListener("click", () => promptBox.classList.add("hidden"));
+    }
+  }
+
+  function startDrawing(e) {
+    if (!isDrawingMode || !drawCtx || !drawCanvas) return;
+    isDrawing = true;
+    const rect = drawCanvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    drawCtx.beginPath();
+    drawCtx.moveTo(x, y);
+    drawCtx.strokeStyle = drawPenColor;
+    drawCtx.lineWidth = drawPenSize;
+    drawCtx.lineCap = "round";
+    drawCtx.lineJoin = "round";
+  }
+
+  function drawStroke(e) {
+    if (!isDrawing || !isDrawingMode || !drawCtx || !drawCanvas) return;
+    const rect = drawCanvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    drawCtx.lineTo(x, y);
+    drawCtx.stroke();
+  }
+
+  function stopDrawing() {
+    isDrawing = false;
   }
 
   function applyCreativeZoom() {
