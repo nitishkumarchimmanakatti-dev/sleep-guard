@@ -1532,6 +1532,8 @@ print("Developer Flow Session Started. Stay hydrated!")
     if (text) text.textContent = duration;
     if (fill) fill.style.strokeDashoffset = circ;
 
+    updateBreakExerciseStep(duration);
+
     if (state.eyeBreak.modalTimerId) clearInterval(state.eyeBreak.modalTimerId);
     let elapsed = 0;
     state.eyeBreak.modalTimerId = setInterval(() => {
@@ -1539,11 +1541,49 @@ print("Developer Flow Session Started. Stay hydrated!")
       const rem = duration - elapsed;
       if (text) text.textContent = Math.max(0, rem);
       if (fill) fill.style.strokeDashoffset = circ - (elapsed / duration) * circ;
+      updateBreakExerciseStep(rem);
+
       if (elapsed >= duration) {
         clearInterval(state.eyeBreak.modalTimerId);
-        dismissEyeBreak();
+        setTimeout(() => {
+          dismissEyeBreak();
+        }, 1200);
       }
     }, 1000);
+  }
+
+  function updateBreakExerciseStep(remaining) {
+    const badge = $("#break-phase-badge");
+    const instr = $("#break-live-instruction");
+    const dot1 = $("#dot-phase-1");
+    const dot2 = $("#dot-phase-2");
+    const dot3 = $("#dot-phase-3");
+
+    if (remaining >= 14) {
+      if (badge) badge.textContent = "Phase 1: Look 20ft Away";
+      if (instr) instr.textContent = "🔭 Look away from screen. Focus on an object at least 20 feet (6m) away across the room or out a window.";
+      if (dot1) dot1.className = "step-dot active";
+      if (dot2) dot2.className = "step-dot";
+      if (dot3) dot3.className = "step-dot";
+    } else if (remaining >= 7) {
+      if (badge) badge.textContent = "Phase 2: Slow Hydration Blinks";
+      if (instr) instr.textContent = "💧 Blink your eyes slowly and gently 3 times. This replenishes your corneal tear film and eliminates dryness.";
+      if (dot1) dot1.className = "step-dot done";
+      if (dot2) dot2.className = "step-dot active";
+      if (dot3) dot3.className = "step-dot";
+    } else if (remaining >= 1) {
+      if (badge) badge.textContent = "Phase 3: Deep Muscle Relaxation";
+      if (instr) instr.textContent = "🧘 Keep gaze soft on the distance. Inhale and exhale deeply. Feel your ciliary eye muscles fully unlock.";
+      if (dot1) dot1.className = "step-dot done";
+      if (dot2) dot2.className = "step-dot done";
+      if (dot3) dot3.className = "step-dot active";
+    } else {
+      if (badge) badge.textContent = "✨ Ocular Recovery Complete!";
+      if (instr) instr.textContent = "🎉 Great job! Your eye ciliary muscles are reset. Ready to return with sharp, strain-free vision!";
+      if (dot1) dot1.className = "step-dot done";
+      if (dot2) dot2.className = "step-dot done";
+      if (dot3) dot3.className = "step-dot done";
+    }
   }
 
   function dismissEyeBreak() {

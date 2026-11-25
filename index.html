@@ -9,7 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=3.0">
+    <link rel="stylesheet" href="style.css?v=3.1">
 </head>
 <body>
     <!-- Loading Screen -->
@@ -46,8 +46,29 @@
     <div id="break-modal" class="modal hidden">
         <div class="modal-content break-content">
             <div class="break-icon">🌿</div>
-            <h2>Eye Rest Break (20-20-20)</h2>
-            <p>Look at an object at least <strong>20 feet away</strong> for 20 seconds to relax your eye ciliary muscles.</p>
+            <h2>20-20-20 Eye Strain Prevention</h2>
+            <p class="break-subtitle">Follow the 3 rules of ocular recovery to prevent digital eye fatigue and headaches:</p>
+            
+            <!-- What Each 20 Means -->
+            <div class="rule-triad">
+                <div class="triad-card">
+                    <span class="triad-num">20</span>
+                    <span class="triad-unit">MINUTES</span>
+                    <span class="triad-desc">Screen Work Interval</span>
+                </div>
+                <div class="triad-card active-pillar">
+                    <span class="triad-num">20</span>
+                    <span class="triad-unit">FEET (6m)</span>
+                    <span class="triad-desc">Far Focal Distance</span>
+                </div>
+                <div class="triad-card active-pillar">
+                    <span class="triad-num">20</span>
+                    <span class="triad-unit">SECONDS</span>
+                    <span class="triad-desc">Ciliary Muscle Rest</span>
+                </div>
+            </div>
+
+            <!-- Timer Circle -->
             <div class="break-timer">
                 <svg viewBox="0 0 100 100">
                     <circle class="cal-timer-bg" cx="50" cy="50" r="40"/>
@@ -55,7 +76,21 @@
                 </svg>
                 <span id="break-timer-text">20</span>
             </div>
-            <button id="dismiss-break-btn" class="btn btn-primary">Done Rested</button>
+
+            <!-- Dynamic Live Guided Action for each second -->
+            <div id="break-action-box" class="break-action-box">
+                <span id="break-phase-badge" class="break-phase-badge">Phase 1: Look Far</span>
+                <p id="break-live-instruction" class="break-live-instruction">🔭 Look away from your screen. Focus on a window or far object 20+ feet away.</p>
+            </div>
+
+            <!-- 3-Phase Step Dots -->
+            <div class="break-step-dots">
+                <span class="step-dot active" id="dot-phase-1" title="Phase 1: Look Far">1. Look 20ft</span>
+                <span class="step-dot" id="dot-phase-2" title="Phase 2: Hydrate Tears">2. Slow Blinks</span>
+                <span class="step-dot" id="dot-phase-3" title="Phase 3: Deep Relax">3. Relax Ciliary</span>
+            </div>
+
+            <button id="dismiss-break-btn" class="btn btn-primary btn-large">Done Rested</button>
         </div>
     </div>
 
@@ -580,6 +615,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
-    <script src="app.js?v=3.0"></script>
+    <script src="app.js?v=3.1"></script>
 </body>
 </html>
