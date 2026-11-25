@@ -34,6 +34,34 @@
     workerTimerId: null,
     bgWorker: null,
     calibration: { openEAR: 0.28, closedEAR: 0.15, done: false },
+    currentMode: "movie", // "movie" | "code" | "creative" | "study" | "health"
+    posture: {
+      baselineY: null,
+      baselineDist: null,
+      baselinePitchRatio: null,
+      baselineVertDist: null,
+      calibrated: false,
+      status: "good", // "good" | "slouch" | "close" | "tilt"
+      slouchFrames: 0,
+      closeFrames: 0,
+      lastWarning: 0,
+    },
+    nodding: {
+      isNodding: false,
+      nodFrames: 0,
+      nodStartTime: null,
+      lastAlert: 0,
+    },
+    study: {
+      bookmarks: [],
+    },
+    eyeBreak: {
+      intervalSec: 20 * 60, // 20 minutes
+      remainingSec: 20 * 60,
+      timerId: null,
+      modalTimerId: null,
+      active: false,
+    },
     config: {
       earThreshold: 0.21,
       alertDelay: 3,
@@ -42,6 +70,10 @@
       flashAlert: true,
       voiceAlert: true,
       vibrateAlert: true,
+      soundStyle: "auto", // "auto" | "siren" | "binaural" | "gentle"
+      nodDetection: true,
+      postureDetection: true,
+      breakReminder: true,
     },
     fps: { count: 0, last: Date.now(), value: 0 },
     lastEAR: 0.3,
@@ -121,6 +153,35 @@
     $("#alert-flash-toggle").addEventListener("change", (e) => (state.config.flashAlert = e.target.checked));
     $("#alert-voice-toggle").addEventListener("change", (e) => (state.config.voiceAlert = e.target.checked));
     $("#alert-vibrate-toggle").addEventListener("change", (e) => (state.config.vibrateAlert = e.target.checked));
+    // New Settings
+    const soundStyleSel = $("#alert-sound-style");
+    if (soundStyleSel) soundStyleSel.addEventListener("change", (e) => (state.config.soundStyle = e.target.value));
+    const nodToggle = $("#feature-nod-toggle");
+    if (nodToggle) nodToggle.addEventListener("change", (e) => (state.config.nodDetection = e.target.checked));
+    const postureToggle = $("#feature-posture-toggle");
+    if (postureToggle) postureToggle.addEventListener("change", (e) => (state.config.postureDetection = e.target.checked));
+    const breakToggle = $("#feature-break-toggle");
+    if (breakToggle) breakToggle.addEventListener("change", (e) => (state.config.breakReminder = e.target.checked));
+
+    // Mode tabs
+    $$(".mode-tab").forEach((tab) => {
+      tab.addEventListener("click", () => switchMode(tab.dataset.mode));
+    });
+
+    // Posture recalibration
+    const recalPostureBtn = $("#recalibrate-posture-btn");
+    if (recalPostureBtn) recalPostureBtn.addEventListener("click", () => calibratePosture(true));
+
+    // Study Bookmarks
+    const addBookmarkBtn = $("#add-manual-bookmark-btn");
+    if (addBookmarkBtn) addBookmarkBtn.addEventListener("click", () => addStudyBookmark("Manual Bookmark"));
+
+    // 20-20-20 Eye Break
+    const triggerBreakBtn = $("#trigger-break-now-btn");
+    if (triggerBreakBtn) triggerBreakBtn.addEventListener("click", triggerEyeBreak);
+    const dismissBreakBtn = $("#dismiss-break-btn");
+    if (dismissBreakBtn) dismissBreakBtn.addEventListener("click", dismissEyeBreak);
+
     // Cancel calibration
     $("#cancel-calibration").addEventListener("click", () => $("#calibration-modal").classList.add("hidden"));
     // PiP
@@ -212,6 +273,9 @@
     startKeepalive();
     // Acquire wake lock
     acquireWakeLock();
+    // Reset posture & start eye break timer
+    state.posture.calibrated = false;
+    startBreakTimer();
   }
 
   function stopMonitoring() {
@@ -226,6 +290,7 @@
     stopKeepalive();
     releaseWakeLock();
     exitPiP();
+    stopBreakTimer();
   }
 
   function setStatus(level, text) {
@@ -323,6 +388,9 @@
     }
 
     state.lastEAR = avgEAR;
+
+    // Process Posture, Head Nodding & Flow state
+    processPostureAndNodding(landmarks, avgEAR, perclos);
   }
 
   // ── EAR Calculation ──
@@ -479,25 +547,63 @@
   }
 
   // ── Alert System ──
-  function triggerAlert(isTest) {
+  function triggerAlert(isTest, reason) {
     if (state.alertActive && !isTest) return;
     state.alertActive = true;
+    const alertReason = reason || "sleep";
+
     // Pause video
     const player = $("#media-player");
-    if (player && !player.paused) player.pause();
+    if (player && !player.paused) {
+      player.pause();
+      // If Study Mode, automatically save a lecture bookmark
+      if (state.currentMode === "study") {
+        addStudyBookmark(alertReason === "nodding" ? "Nodded off in lecture" : "Eyes closed in lecture");
+      }
+    }
+
+    // Configure overlay text according to alert reason & mode
+    const alertTitle = $("#alert-overlay .alert-title");
+    const alertSub = $("#alert-overlay .alert-subtitle");
+    if (alertReason === "nodding") {
+      alertTitle.textContent = "HEAD DROOPING!";
+      alertSub.textContent = "Microsleep or head nodding detected";
+    } else if (alertReason === "slouch") {
+      alertTitle.textContent = "CHECK POSTURE!";
+      alertSub.textContent = "Slouching or screen proximity detected";
+    } else {
+      alertTitle.textContent = "WAKE UP!";
+      alertSub.textContent = "You appear to be falling asleep";
+    }
+
     // Show overlay
     if (state.config.flashAlert) $("#alert-overlay").classList.remove("hidden");
     setStatus("danger", "⚠ ALERT!");
-    // Sound alarm
-    if (state.config.soundAlert) playAlarm();
+
+    // Sound alert selection
+    if (state.config.soundAlert) {
+      let style = state.config.soundStyle;
+      if (style === "auto") {
+        if (state.currentMode === "code" || state.currentMode === "creative") style = "binaural";
+        else if (state.currentMode === "study" || state.currentMode === "health") style = "gentle";
+        else style = "siren";
+      }
+
+      if (style === "binaural") playBinauralChime();
+      else if (style === "gentle") playPostureChime();
+      else playAlarm();
+    }
+
     // Voice
-    if (state.config.voiceAlert) speakAlert();
+    if (state.config.voiceAlert) speakAlert(alertReason);
+
     // Vibration
     if (state.config.vibrateAlert && navigator.vibrate) {
       navigator.vibrate([500, 200, 500, 200, 500, 200, 500]);
     }
+
     // Browser notification (works even when tab is in background / VLC is focused)
-    sendBrowserNotification();
+    sendBrowserNotification(alertReason);
   }
 
   function dismissAlert() {
@@ -555,12 +661,68 @@
     state.alarmOscillators = [];
   }
 
-  function speakAlert() {
+  function playBinauralChime() {
+    stopAlarm();
+    const ctx = getAudioCtx();
+    const vol = state.config.alertVolume;
+    // C-major 9th harmonic chord: C4 (261.6), E4 (329.6), G4 (392.0), B4 (493.9), D5 (587.3)
+    const chord = [261.63, 329.63, 392.0, 493.88, 587.33];
+    chord.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      const now = ctx.currentTime + idx * 0.08;
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(vol * 0.18, now + 0.15);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 2.2);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 2.3);
+      state.alarmOscillators.push({ osc, gain });
+    });
+  }
+
+  function playPostureChime() {
+    stopAlarm();
+    const ctx = getAudioCtx();
+    const vol = state.config.alertVolume;
+    // Pleasant two-tone marimba chime (C5 -> G5)
+    [523.25, 783.99].forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "triangle";
+      osc.frequency.value = freq;
+      const now = ctx.currentTime + idx * 0.14;
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(vol * 0.22, now + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 1.3);
+      state.alarmOscillators.push({ osc, gain });
+    });
+  }
+
+  function speakAlert(reason) {
     if (!("speechSynthesis" in window)) return;
     window.speechSynthesis.cancel();
-    const msg = new SpeechSynthesisUtterance("Wake up! You are falling asleep!");
-    msg.rate = 1.1;
-    msg.pitch = 1.2;
+    let text = "Wake up! You are falling asleep!";
+    if (reason === "nodding") {
+      text = state.currentMode === "code"
+        ? "Keep your head up, developer! Microsleep detected."
+        : "Keep your head up! Stay alert.";
+    } else if (reason === "slouch") {
+      text = "Check your posture! Sit upright.";
+    } else if (state.currentMode === "study") {
+      text = "Stay focused! You can do this. Lecture bookmarked.";
+    }
+
+    const msg = new SpeechSynthesisUtterance(text);
+    msg.rate = 1.05;
+    msg.pitch = 1.1;
     msg.volume = state.config.alertVolume;
     window.speechSynthesis.speak(msg);
   }
@@ -693,6 +855,342 @@
     player.play().catch(() => {});
   }
 
+  // ═══════════════════════════════════════
+  // Mode Switcher, Posture, Nodding & Health Modules
+  // ═══════════════════════════════════════
+
+  const MODE_METADATA = {
+    movie: {
+      hint: "Watching movies/shows with deep sleep alarm & VLC float",
+      delay: 3.0,
+      soundStyle: "siren",
+      note: "💡 You can also watch in VLC, Netflix, or any player — SleepGuard monitors independently",
+      panels: []
+    },
+    code: {
+      hint: "Coding & Dev: Head nod detection, fatigue tracking & harmonic bell",
+      delay: 2.5,
+      soundStyle: "binaural",
+      note: "💻 DevGuard active: Head nodding, blink rate, and fatigue monitoring running in background",
+      panels: ["flow-panel"]
+    },
+    creative: {
+      hint: "Creative Studio: Gentle lo-fi chimes & flow-state tracking",
+      delay: 2.5,
+      soundStyle: "binaural",
+      note: "🎨 Creative Mode: Tracks focus zones during rendering & timeline editing",
+      panels: ["flow-panel"]
+    },
+    study: {
+      hint: "Smart Study: Fast 1.8s sleep response, motivational voice & lecture bookmarks",
+      delay: 1.8,
+      soundStyle: "gentle",
+      note: "📚 StudyGuard active: Auto-pauses lectures and bookmarks timestamp when you nod off",
+      panels: ["study-panel"]
+    },
+    health: {
+      hint: "Desk Health: Spine posture & 20-20-20 eye strain break reminder",
+      delay: 3.0,
+      soundStyle: "gentle",
+      note: "🧘 Posture & Eye Guardian: Keeps your spine straight & prevents digital eye strain",
+      panels: ["health-panel"]
+    }
+  };
+
+  function switchMode(mode) {
+    if (!MODE_METADATA[mode]) return;
+    state.currentMode = mode;
+
+    // Update tab classes
+    $$(".mode-tab").forEach((tab) => {
+      tab.classList.toggle("active", tab.dataset.mode === mode);
+    });
+
+    const meta = MODE_METADATA[mode];
+    const hintEl = $("#mode-badge-hint");
+    if (hintEl) hintEl.textContent = meta.hint;
+    const noteEl = $("#panel-note-text");
+    if (noteEl) noteEl.textContent = meta.note;
+
+    // Apply mode default delay
+    state.config.alertDelay = meta.delay;
+    const delaySlider = $("#alert-delay");
+    if (delaySlider) delaySlider.value = meta.delay;
+    const delayVal = $("#alert-delay-val");
+    if (delayVal) delayVal.textContent = meta.delay.toFixed(1) + "s";
+
+    // Toggle panels
+    ["study-panel", "health-panel", "flow-panel"].forEach((id) => {
+      const el = $(`#${id}`);
+      if (el) el.classList.toggle("hidden", !meta.panels.includes(id));
+    });
+
+    playPostureChime();
+  }
+
+  function calibratePosture(manual) {
+    if (!state.lastLandmarks) return;
+    const lm = state.lastLandmarks;
+    // Landmark 10 (forehead), 1 (nose tip), 152 (chin), 234 (left cheek), 454 (right cheek)
+    state.posture.baselineY = lm[1].y;
+    state.posture.baselineDist = Math.hypot(lm[454].x - lm[234].x, lm[454].y - lm[234].y);
+    const topDist = Math.abs(lm[1].y - lm[10].y);
+    const botDist = Math.abs(lm[152].y - lm[1].y);
+    state.posture.baselinePitchRatio = botDist > 0.005 ? topDist / botDist : 1.0;
+    state.posture.baselineVertDist = Math.abs(lm[152].y - lm[10].y);
+    state.posture.calibrated = true;
+    if (manual) {
+      playPostureChime();
+      setStatus("active", "Posture Calibrated!");
+      setTimeout(() => { if (state.monitoring) setStatus("active", "Monitoring"); }, 1500);
+    }
+  }
+
+  function processPostureAndNodding(landmarks, avgEAR, perclos) {
+    state.lastLandmarks = landmarks;
+    if (!state.monitoring) return;
+
+    // Auto-calibrate baseline if not done
+    if (!state.posture.calibrated) {
+      state.posture.autoCalFrames = (state.posture.autoCalFrames || 0) + 1;
+      if (state.posture.autoCalFrames > 15) {
+        calibratePosture(false);
+      }
+      return;
+    }
+
+    const lm = landmarks;
+    const faceWidth = Math.hypot(lm[454].x - lm[234].x, lm[454].y - lm[234].y);
+    const noseY = lm[1].y;
+    const topDist = Math.abs(lm[1].y - lm[10].y);
+    const botDist = Math.abs(lm[152].y - lm[1].y);
+    const pitchRatio = botDist > 0.005 ? topDist / botDist : 1.0;
+    const vertDist = Math.abs(lm[152].y - lm[10].y);
+
+    // 1. Posture & Slouch Check
+    let postureStatus = "good";
+    let postureText = "Posture: Optimal";
+    let postClass = "status-pill-good";
+
+    if (state.config.postureDetection) {
+      if (faceWidth > state.posture.baselineDist * 1.35) {
+        postureStatus = "close";
+        postureText = "Posture: Too Close";
+        postClass = "status-pill-warn";
+        state.posture.closeFrames++;
+      } else if (noseY > state.posture.baselineY + 0.08) {
+        postureStatus = "slouch";
+        postureText = "Posture: Slouching";
+        postClass = "status-pill-warn";
+        state.posture.slouchFrames++;
+      } else {
+        state.posture.closeFrames = 0;
+        state.posture.slouchFrames = 0;
+      }
+
+      // If slouching or leaning close for > 5 seconds in Health or Dev mode, trigger gentle posture reminder
+      if ((state.currentMode === "health" || state.currentMode === "code") &&
+          (state.posture.slouchFrames > 120 || state.posture.closeFrames > 120) &&
+          !state.alertActive && Date.now() - state.posture.lastWarning > 30000) {
+        state.posture.lastWarning = Date.now();
+        playPostureChime();
+        speakAlert("slouch");
+      }
+    }
+
+    state.posture.status = postureStatus;
+    const postPill = $("#posture-pill");
+    const postText = $("#posture-status-text");
+    const camPost = $("#cam-posture-display");
+    if (postPill) {
+      postPill.className = `posture-pill ${postClass}`;
+      postText.textContent = postureText;
+    }
+    if (camPost) {
+      camPost.textContent = postureStatus === "good" ? "Posture: OK" : `Posture: ${postureStatus.toUpperCase()}`;
+      camPost.style.color = postureStatus === "good" ? "var(--success)" : "var(--warning)";
+    }
+
+    // Update Health Dashboard values if visible
+    const healthPostVal = $("#health-posture-val");
+    if (healthPostVal) {
+      healthPostVal.textContent = postureStatus === "good" ? "Optimal" : (postureStatus === "slouch" ? "Slouching" : "Too Close");
+      healthPostVal.style.color = postureStatus === "good" ? "var(--success)" : "var(--warning)";
+    }
+
+    // 2. Head Nodding / Drooping Check
+    let nodText = "Head: Upright";
+    let nodClass = "status-pill-good";
+    if (state.config.nodDetection) {
+      const isPitchCompressed = pitchRatio < state.posture.baselinePitchRatio * 0.72;
+      const isVertCompressed = vertDist < state.posture.baselineVertDist * 0.76;
+      const isDrooping = isPitchCompressed || isVertCompressed;
+
+      if (isDrooping) {
+        if (!state.nodding.nodStartTime) state.nodding.nodStartTime = Date.now();
+        const nodDuration = (Date.now() - state.nodding.nodStartTime) / 1000;
+        if (nodDuration >= 1.2) {
+          nodText = "Head: Nodding!";
+          nodClass = "status-pill-danger";
+          if (!state.alertActive && !state.dismissCooldown && Date.now() - state.nodding.lastAlert > 10000) {
+            state.nodding.lastAlert = Date.now();
+            state.drowsyEpisodes++;
+            $("#stat-drowsy").textContent = state.drowsyEpisodes;
+            triggerAlert(false, "nodding");
+          }
+        } else {
+          nodText = "Head: Tilting...";
+          nodClass = "status-pill-warn";
+        }
+      } else {
+        state.nodding.nodStartTime = null;
+      }
+    }
+    const nodPill = $("#nod-pill");
+    const nodTextEl = $("#nod-status-text");
+    if (nodPill) {
+      nodPill.className = `posture-pill ${nodClass}`;
+      nodTextEl.textContent = nodText;
+    }
+
+    // 3. Flow & Fatigue Index calculation for Code & Creative Modes
+    const flowVal = $("#flow-index-val");
+    const fatigueVal = $("#flow-fatigue-val");
+    const fatigueAdv = $("#flow-fatigue-advice");
+    if (flowVal && fatigueVal) {
+      const focusScore = Math.max(10, Math.min(99, Math.round(100 - perclos * 0.8 - (avgEAR < 0.22 ? 25 : 0))));
+      flowVal.textContent = `${focusScore >= 75 ? "High" : (focusScore >= 50 ? "Moderate" : "Low")} (${focusScore}%)`;
+      flowVal.style.color = focusScore >= 75 ? "var(--accent)" : (focusScore >= 50 ? "var(--warning)" : "var(--danger)");
+
+      if (perclos < 20) {
+        fatigueVal.textContent = "Fresh";
+        fatigueVal.style.color = "var(--success)";
+        if (fatigueAdv) fatigueAdv.textContent = "Optimal state for complex architecture & deep coding";
+      } else if (perclos < 45) {
+        fatigueVal.textContent = "Moderate";
+        fatigueVal.style.color = "var(--warning)";
+        if (fatigueAdv) fatigueAdv.textContent = "Focus declining. Keep hydrated and take regular pauses.";
+      } else {
+        fatigueVal.textContent = "High Fatigue";
+        fatigueVal.style.color = "var(--danger)";
+        if (fatigueAdv) fatigueAdv.textContent = "Alertness low! Avoid critical merges without testing.";
+      }
+    }
+  }
+
+  function addStudyBookmark(reason) {
+    const player = $("#media-player");
+    const seconds = player && !isNaN(player.currentTime) ? Math.floor(player.currentTime) : 0;
+    const mins = String(Math.floor(seconds / 60)).padStart(2, "0");
+    const secs = String(seconds % 60).padStart(2, "0");
+    const formatted = `${mins}:${secs}`;
+    const item = {
+      seconds,
+      formatted,
+      reason: reason || "Lecture Bookmark",
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+    state.study.bookmarks.unshift(item);
+    renderStudyBookmarks();
+  }
+
+  function renderStudyBookmarks() {
+    const list = $("#study-bookmarks-list");
+    if (!list) return;
+    if (state.study.bookmarks.length === 0) {
+      list.innerHTML = `<p class="empty-hint">No bookmarks yet. If you nod off or close your eyes during a lecture, SleepGuard auto-saves the timestamp here so you can resume!</p>`;
+      return;
+    }
+    list.innerHTML = state.study.bookmarks.map((b, i) => `
+      <div class="bookmark-item" data-idx="${i}" title="Click to jump player to ${b.formatted}">
+        <span class="bookmark-time">⏱️ ${b.formatted}</span>
+        <span class="bookmark-note">${b.reason} (${b.timestamp})</span>
+        <span class="btn btn-ghost btn-sm" style="padding:2px 8px;">▶ Jump</span>
+      </div>
+    `).join("");
+
+    list.querySelectorAll(".bookmark-item").forEach((el) => {
+      el.addEventListener("click", () => {
+        const idx = parseInt(el.dataset.idx);
+        const b = state.study.bookmarks[idx];
+        const player = $("#media-player");
+        if (player && b) {
+          player.currentTime = b.seconds;
+          player.play().catch(() => {});
+        }
+      });
+    });
+  }
+
+  function startBreakTimer() {
+    stopBreakTimer();
+    state.eyeBreak.remainingSec = state.eyeBreak.intervalSec;
+    state.eyeBreak.timerId = setInterval(() => {
+      if (!state.monitoring) return;
+      state.eyeBreak.remainingSec--;
+      updateBreakCountdown();
+      if (state.eyeBreak.remainingSec <= 0) {
+        state.eyeBreak.remainingSec = state.eyeBreak.intervalSec;
+        if (state.config.breakReminder) {
+          triggerEyeBreak();
+        }
+      }
+    }, 1000);
+  }
+
+  function stopBreakTimer() {
+    if (state.eyeBreak.timerId) {
+      clearInterval(state.eyeBreak.timerId);
+      state.eyeBreak.timerId = null;
+    }
+  }
+
+  function updateBreakCountdown() {
+    const m = String(Math.floor(state.eyeBreak.remainingSec / 60)).padStart(2, "0");
+    const s = String(state.eyeBreak.remainingSec % 60).padStart(2, "0");
+    const el = $("#health-break-countdown");
+    if (el) el.textContent = `${m}:${s}`;
+  }
+
+  function triggerEyeBreak() {
+    const modal = $("#break-modal");
+    if (!modal) return;
+    modal.classList.remove("hidden");
+    state.eyeBreak.active = true;
+    playPostureChime();
+
+    let duration = 20;
+    const fill = $("#break-timer-fill");
+    const text = $("#break-timer-text");
+    const circ = 2 * Math.PI * 40;
+    if (text) text.textContent = duration;
+    if (fill) fill.style.strokeDashoffset = circ;
+
+    if (state.eyeBreak.modalTimerId) clearInterval(state.eyeBreak.modalTimerId);
+    let elapsed = 0;
+    state.eyeBreak.modalTimerId = setInterval(() => {
+      elapsed++;
+      const rem = duration - elapsed;
+      if (text) text.textContent = Math.max(0, rem);
+      if (fill) fill.style.strokeDashoffset = circ - (elapsed / duration) * circ;
+      if (elapsed >= duration) {
+        clearInterval(state.eyeBreak.modalTimerId);
+        dismissEyeBreak();
+      }
+    }, 1000);
+  }
+
+  function dismissEyeBreak() {
+    const modal = $("#break-modal");
+    if (modal) modal.classList.add("hidden");
+    if (state.eyeBreak.modalTimerId) {
+      clearInterval(state.eyeBreak.modalTimerId);
+      state.eyeBreak.modalTimerId = null;
+    }
+    state.eyeBreak.active = false;
+    playBinauralChime();
+  }
+
   // ── Start ──
   window.addEventListener("DOMContentLoaded", init);
 
@@ -780,12 +1278,25 @@
   });
 
   // -- Browser Notifications --
-  function sendBrowserNotification() {
+  function sendBrowserNotification(reason) {
     if (!("Notification" in window)) return;
     if (Notification.permission !== "granted") return;
     try {
-      const n = new Notification("⚠️ SleepGuard — WAKE UP!", {
-        body: "You appear to be falling asleep! Click to return.",
+      let title = "⚠️ SleepGuard — WAKE UP!";
+      let body = "You appear to be falling asleep! Click to return.";
+      if (reason === "nodding") {
+        title = "⚠️ SleepGuard — Head Drooping!";
+        body = "Microsleep / head nodding detected. Click to check in.";
+      } else if (reason === "slouch") {
+        title = "🧘 SleepGuard — Posture Check";
+        body = "Slouching or screen proximity detected. Sit upright.";
+      } else if (state.currentMode === "study") {
+        title = "📚 SleepGuard — Study Alert";
+        body = "Lecture paused and timestamp saved. Click to resume!";
+      }
+
+      const n = new Notification(title, {
+        body: body,
         icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚠️</text></svg>",
         requireInteraction: true,
         tag: "sleepguard-alert",

@@ -42,6 +42,23 @@
         </div>
     </div>
 
+    <!-- 20-20-20 Eye Break Modal -->
+    <div id="break-modal" class="modal hidden">
+        <div class="modal-content break-content">
+            <div class="break-icon">🌿</div>
+            <h2>Eye Rest Break (20-20-20)</h2>
+            <p>Look at an object at least <strong>20 feet away</strong> for 20 seconds to relax your eye ciliary muscles.</p>
+            <div class="break-timer">
+                <svg viewBox="0 0 100 100">
+                    <circle class="cal-timer-bg" cx="50" cy="50" r="40"/>
+                    <circle class="cal-timer-fill" id="break-timer-fill" cx="50" cy="50" r="40"/>
+                </svg>
+                <span id="break-timer-text">20</span>
+            </div>
+            <button id="dismiss-break-btn" class="btn btn-primary">Done Rested</button>
+        </div>
+    </div>
+
     <!-- Calibration Modal -->
     <div id="calibration-modal" class="modal hidden">
         <div class="modal-content calibration-content">
@@ -106,6 +123,29 @@
                     <select id="camera-select"></select>
                 </div>
                 <div class="setting-group">
+                    <label for="alert-sound-style">Alert Sound Profile</label>
+                    <select id="alert-sound-style">
+                        <option value="auto">Auto (Adaptive by Mode)</option>
+                        <option value="siren">🚨 High-Pitch Siren (Movie Night)</option>
+                        <option value="binaural">🔔 Binaural Bell / Harmonic Chime (Code & Creative)</option>
+                        <option value="gentle">🌿 Soft Marimba / Gentle Nudge (Study & Health)</option>
+                    </select>
+                </div>
+                <div class="setting-group">
+                    <label>Detection Features</label>
+                    <div class="toggle-group">
+                        <label class="toggle-item">
+                            <input type="checkbox" id="feature-nod-toggle" checked> Head Nodding / Microsleep
+                        </label>
+                        <label class="toggle-item">
+                            <input type="checkbox" id="feature-posture-toggle" checked> Posture & Slouch Monitor
+                        </label>
+                        <label class="toggle-item">
+                            <input type="checkbox" id="feature-break-toggle" checked> 20-20-20 Eye Break Reminder
+                        </label>
+                    </div>
+                </div>
+                <div class="setting-group">
                     <label>Alert Type</label>
                     <div class="toggle-group">
                         <label class="toggle-item">
@@ -149,6 +189,33 @@
             </div>
         </header>
 
+        <!-- Mode Selector Bar -->
+        <div id="mode-bar-container">
+            <div id="mode-bar" class="glass-panel">
+                <button class="mode-tab active" data-mode="movie">
+                    <span class="mode-icon">🎬</span>
+                    <span class="mode-label">Movie Mode</span>
+                </button>
+                <button class="mode-tab" data-mode="code">
+                    <span class="mode-icon">💻</span>
+                    <span class="mode-label">Code & Dev</span>
+                </button>
+                <button class="mode-tab" data-mode="creative">
+                    <span class="mode-icon">🎨</span>
+                    <span class="mode-label">Creative</span>
+                </button>
+                <button class="mode-tab" data-mode="study">
+                    <span class="mode-icon">📚</span>
+                    <span class="mode-label">Study Mode</span>
+                </button>
+                <button class="mode-tab" data-mode="health">
+                    <span class="mode-icon">🧘</span>
+                    <span class="mode-label">Posture & Health</span>
+                </button>
+            </div>
+            <div id="mode-badge-hint" class="mode-hint">Watching videos with sleep alarm & VLC float</div>
+        </div>
+
         <!-- Main Content -->
         <main id="main-content">
             <!-- Video Player Panel -->
@@ -171,7 +238,70 @@
                     </div>
                     <video id="media-player" class="hidden" controls preload="metadata"></video>
                 </div>
-                <p class="panel-note">💡 You can also watch in any other app — SleepGuard monitors independently</p>
+                <!-- Study Mode Bookmarks (visible in Study Mode) -->
+                <div id="study-panel" class="mode-addon-panel hidden">
+                    <div class="addon-header">
+                        <span class="addon-title">📚 Lecture Bookmarks (Saved on Nodding/Sleep)</span>
+                        <button id="add-manual-bookmark-btn" class="btn btn-ghost btn-sm">📍 Add Bookmark</button>
+                    </div>
+                    <div id="study-bookmarks-list" class="bookmarks-list">
+                        <p class="empty-hint">No bookmarks yet. If you nod off or close your eyes during a lecture, SleepGuard auto-saves the timestamp here so you can resume!</p>
+                    </div>
+                </div>
+
+                <!-- Health & Ergonomics View (visible in Health Mode) -->
+                <div id="health-panel" class="mode-addon-panel hidden">
+                    <div class="health-grid">
+                        <div class="health-card">
+                            <span class="health-icon">🪑</span>
+                            <div class="health-card-body">
+                                <span class="health-label">Spine & Posture</span>
+                                <span class="health-value" id="health-posture-val">Optimal</span>
+                                <span class="health-sub">Keep ears aligned over shoulders</span>
+                            </div>
+                        </div>
+                        <div class="health-card">
+                            <span class="health-icon">🌿</span>
+                            <div class="health-card-body">
+                                <span class="health-label">20-20-20 Eye Rest</span>
+                                <span class="health-value" id="health-break-countdown">20:00</span>
+                                <button id="trigger-break-now-btn" class="btn btn-primary btn-sm">Take Break Now</button>
+                            </div>
+                        </div>
+                        <div class="health-card">
+                            <span class="health-icon">💧</span>
+                            <div class="health-card-body">
+                                <span class="health-label">Eye Hydration</span>
+                                <span class="health-value" id="health-blink-status">Normal</span>
+                                <span class="health-sub">Target > 12 blinks/min</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Code & Creative Flow Dashboard (visible in Code & Creative Mode) -->
+                <div id="flow-panel" class="mode-addon-panel hidden">
+                    <div class="flow-grid">
+                        <div class="flow-card">
+                            <span class="flow-icon">⚡</span>
+                            <div class="flow-card-body">
+                                <span class="flow-label">Flow & Focus Index</span>
+                                <span class="flow-value" id="flow-index-val">High (92%)</span>
+                                <span class="flow-sub">Consistent eye movement & attention</span>
+                            </div>
+                        </div>
+                        <div class="flow-card">
+                            <span class="flow-icon">🧠</span>
+                            <div class="flow-card-body">
+                                <span class="flow-label">Mental Fatigue Status</span>
+                                <span class="flow-value" id="flow-fatigue-val">Fresh</span>
+                                <span class="flow-sub" id="flow-fatigue-advice">Optimal state for complex architecture & debugging</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="panel-note" id="panel-note-text">💡 You can also watch in any other app — SleepGuard monitors independently</p>
             </section>
 
             <!-- Monitor Panel -->
@@ -187,6 +317,7 @@
                     <canvas id="face-canvas"></canvas>
                     <div id="cam-overlay-info" class="hidden">
                         <span id="cam-ear-display">EAR: 0.00</span>
+                        <span id="cam-posture-display">Posture: OK</span>
                         <span id="cam-fps-display">FPS: 0</span>
                     </div>
                     <div id="no-camera-msg">
@@ -229,6 +360,19 @@
                             <span class="ear-val" id="right-ear-val">—</span>
                         </div>
                     </div>
+                </div>
+
+                <!-- Posture & Head Angle Status Bar -->
+                <div id="posture-meter-row">
+                    <div class="posture-pill status-pill-good" id="posture-pill">
+                        <span class="posture-dot"></span>
+                        <span id="posture-status-text">Posture: Optimal</span>
+                    </div>
+                    <div class="posture-pill status-pill-good" id="nod-pill">
+                        <span class="nod-dot"></span>
+                        <span id="nod-status-text">Head: Upright</span>
+                    </div>
+                    <button id="recalibrate-posture-btn" class="btn btn-ghost btn-sm" title="Calibrate current position as ideal posture">Set Posture</button>
                 </div>
             </section>
         </main>

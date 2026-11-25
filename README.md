@@ -1,22 +1,32 @@
-# 👁️ SleepGuard — AI Sleep Detection & Alert System
+# 👁️ SleepGuard — AI Focus, Posture & Sleep Detection System
 
-**SleepGuard** is a free, browser-based AI application that uses your laptop camera to detect if you fall asleep while watching movies or content. It alerts you with loud alarms, voice alerts, and screen flashes to wake you up.
+**SleepGuard** is a free, browser-based AI application that uses your laptop camera to monitor eye openness, head posture, and fatigue levels across multiple creative workflows. Whether you're watching movies, late-night coding, editing video, studying lectures, or working at a desk, SleepGuard protects your focus and health.
 
 ![SleepGuard Demo](https://img.shields.io/badge/Status-Active-brightgreen) ![License](https://img.shields.io/badge/License-MIT-blue) ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)
 
-## ✨ Features
+## 🎯 5 Specialized Work Modes
 
-- 🧠 **AI-Powered Eye Tracking** — Uses MediaPipe FaceMesh for real-time facial landmark detection
-- 👁️ **Eye Aspect Ratio (EAR)** — Precise drowsiness detection based on eye openness measurement
-- 🔊 **Multi-Level Alert System** — Sound alarm, voice alerts ("Wake up!"), screen flash, vibration
-- 🖼️ **Picture-in-Picture Mode** — Float the monitor over VLC, Netflix, or any app
-- 📊 **Real-time Analytics** — EAR graph, blink count, blink rate, PERCLOS, drowsiness gauge
-- 🎯 **Calibration System** — Personalized thresholds calibrated to your eyes
-- 🎬 **Built-in Video Player** — Drag & drop video files to watch directly
-- 🔔 **Browser Notifications** — Alerts work even when using external apps
-- 🔋 **Background Mode** — Web Worker keeps detection running when tab is in background
-- ⚙️ **Configurable** — Adjust sensitivity, delay, volume, and alert types
-- 🆓 **100% Free** — No API keys, no accounts, runs entirely in your browser
+| Mode | Target User | Key Capabilities | Alert Style |
+| :--- | :--- | :--- | :--- |
+| **🎬 Movie Mode** | Movie & show watchers | High-sensitivity eye closure detection, VLC Picture-in-Picture floating monitor | Loud siren alarm + red screen flash + auto video pause |
+| **💻 Code & Dev Mode** | Late-night programmers | Head nodding/microsleep detection, low-blink dry eye warnings, mental fatigue index | Soothing harmonic binaural bell chime |
+| **🎨 Creative Mode** | Designers & video editors | Focus flow state meter, zone-out prevention during long renders or timeline edits | Ambient glow pulse + soft bell |
+| **📚 Study Mode** | Students watching lectures | Rapid 1.8s sleep alert, motivational voice nudge, **Auto-Bookmark timestamps** when nodding off | Motivational speech + lecture auto-pause & timestamp bookmark |
+| **🧘 Posture & Health** | Desk workers | Real-time spine slouching detector, screen proximity warning, interactive **20-20-20 Eye Break** timer | Gentle marimba posture chime + 20s rest countdown |
+
+## ✨ Core Features
+
+- 🧠 **AI-Powered 468-Point Mesh** — Uses MediaPipe FaceMesh for real-time facial landmark detection
+- 👁️ **Eye Aspect Ratio (EAR)** — High-precision drowsiness detection based on eye openness measurement
+- 📐 **Head Pitch & Nodding Detection** — Computes facial foreshortening and pitch ratios to catch microsleep before your head drops
+- 🪑 **Ergonomic Posture Guardian** — Tracks nose, chin, and temple coordinates to detect slouching and excessive screen proximity
+- 🌿 **20-20-20 Eye Strain Prevention** — Built-in 20-minute rest interval with interactive 20-second circular countdown timer
+- 📍 **Study Lecture Bookmarking** — Automatically logs the exact video timestamp when you nod off so you can resume with 1 click
+- 🎵 **Adaptive Sound Profiles** — Automatic selection of loud sirens, binaural focus chords, or gentle marimba chimes depending on mode
+- 🖼️ **Picture-in-Picture Floating Window** — Floats over VLC, Premiere, VS Code, or any fullscreen window
+- 📊 **Real-time Analytics** — EAR graph, blink rate, PERCLOS fatigue score, flow index, and drowsiness gauge
+- 🔔 **Background Tab Execution** — Web Worker timer and silent audio keepalive prevent browser throttling
+- 🆓 **100% Client-Side & Free** — No accounts, no subscriptions, zero data sent to external servers
 
 ## 🚀 Getting Started
 
