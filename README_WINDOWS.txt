@@ -4,12 +4,19 @@
 
 HOW TO RUN ON WINDOWS:
 ---------------------
-1. Right-click the ZIP folder and select "Extract All..."
-2. Open the extracted "SleepGuard" folder.
-3. Double-click "run.bat".
-4. It will automatically start and open http://localhost:3000 in your browser!
-5. Click "Allow" when your browser asks for webcam permission.
-6. Choose your Mode at the top and click "▶ Start Monitoring".
+Option A (Easiest - 1 Click):
+  1. Right-click the ZIP folder and select "Extract All..."
+  2. Open the extracted "SleepGuard" folder.
+  3. Double-click "run.bat".
+  4. It automatically starts and opens http://localhost:3000 in your browser!
+
+Option B (Using Python):
+  1. Open Terminal / Command Prompt in this folder.
+  2. Run: python main.py
+  3. It starts the server and opens your browser automatically.
+
+To Stop:
+  Press Ctrl + C in the terminal window, or close the terminal.
 
 SPECIALIZED WORK MODES:
 -----------------------

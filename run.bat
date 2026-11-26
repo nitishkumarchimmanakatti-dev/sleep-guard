@@ -8,18 +8,16 @@ echo.
 :: Check if Python is installed
 where python >nul 2>nul
 if %ERRORLEVEL% equ 0 (
-    echo [OK] Python detected. Starting server on http://localhost:3000...
-    start "" http://localhost:3000
-    python -m http.server 3000
+    echo [OK] Python detected. Starting via main.py...
+    python main.py
     goto end
 )
 
 :: Check if Python launcher (py) is installed
 where py >nul 2>nul
 if %ERRORLEVEL% equ 0 (
-    echo [OK] Python launcher detected. Starting server on http://localhost:3000...
-    start "" http://localhost:3000
-    py -m http.server 3000
+    echo [OK] Python launcher detected. Starting via main.py...
+    py main.py
     goto end
 )
 
